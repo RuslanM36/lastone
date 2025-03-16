@@ -5,7 +5,6 @@ import (
     "html/template"
     "log"
     "net/http"
-	"path/filepath"
     "strconv"
 )
 
@@ -24,9 +23,11 @@ type CalculationResult struct {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-    tmplPath := filepath.Join("index.html")
-    tmpl := template.Must(template.ParseFiles(tmplPath))
-
+	tmpl, err := template.ParseFiles("index.html")
+	if err != nil {
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
     if r.Method == http.MethodPost {
         flooring := r.FormValue("flooring")
         areaStr := r.FormValue("area")
@@ -53,6 +54,6 @@ func main() {
 	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
 
     fmt.Println("Running demo app. Press Ctrl+C to exit...")
-	log.Println("Server started at http://localhost:8080")
+	log.Println("Server started at http://localhost:8888")
     log.Fatal(http.ListenAndServe(":8888", nil))
 }
