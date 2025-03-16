@@ -54,6 +54,6 @@ func main() {
 	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
 
     fmt.Println("Running demo app. Press Ctrl+C to exit...")
-	log.Println("Server started at http://localhost:8888")
-    log.Fatal(http.ListenAndServe(":8888", nil))
+	log.Println("Server started at http://localhost:8080")
+    log.Fatal(http.ListenAndServe(":8080", nil))
 }
