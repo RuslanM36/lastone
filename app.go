@@ -5,7 +5,6 @@ import (
     "html/template"
     "log"
     "net/http"
-    "path/filepath"
     "strconv"
 )
 
@@ -24,7 +23,7 @@ type CalculationResult struct {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-    tmplPath := filepath.Join("index.html")  // Загрузка HTML из файла
+    tmplPath := "index.html" 
     tmpl := template.Must(template.ParseFiles(tmplPath))
 
     if r.Method == http.MethodPost {

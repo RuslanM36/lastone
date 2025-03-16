@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Калькулятор покрытия</title>
+    <link rel="stylesheet" type="text/css" href="/style.css">
+</head>
+<body>
+    <h1>Калькулятор покрытия</h1>
+    <form method="POST" action="/">
+        <label for="flooring">Выберите тип покрытия:</label>
+        <select name="flooring" id="flooring">
+            <option value="Ламинат">Ламинат</option>
+            <option value="Паркет">Паркет</option>
+            <option value="Ковролин">Ковролин</option>
+            <option value="Плитка">Плитка</option>
+            <option value="Линолеум">Линолеум</option>
+        </select>
+        <br>
+        <label for="area">Введите площадь (в м²):</label>
+        <input type="text" name="area" id="area" required>
+        <br>
+        <input type="submit" value="Рассчитать">
+    </form>
+
+    {{if .FlooringType}}
+    <h2>Результат:</h2>
+    <p>Тип покрытия: {{.FlooringType}}</p>
+    <p>Площадь: {{.Area}} м²</p>
+    <p>Общая стоимость: {{.TotalPrice}} рублей</p>
+    {{end}}
+    <script>
+        document.querySelector("form").addEventListener("submit", function(event) {
+            var area = document.getElementById("area").value;
+            if (isNaN(area) || area <= 0) {
+                alert("Пожалуйста, введите корректное положительное число для площади.");
+                event.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
