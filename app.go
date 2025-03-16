@@ -49,10 +49,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-    fs := http.FileServer(http.Dir("."))  
-    http.Handle("/assets/style.css", fs)
     http.HandleFunc("/", handler)
+	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
 
     fmt.Println("Running demo app. Press Ctrl+C to exit...")
+	log.Println("Server started at http://localhost:8080")
     log.Fatal(http.ListenAndServe(":8888", nil))
 }
