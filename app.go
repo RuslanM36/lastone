@@ -5,6 +5,7 @@ import (
     "html/template"
     "log"
     "net/http"
+	"path/filepath"
     "strconv"
 )
 
@@ -23,7 +24,7 @@ type CalculationResult struct {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-    tmplPath := "index.html" 
+    tmplPath := filepath.Join("index.html")
     tmpl := template.Must(template.ParseFiles(tmplPath))
 
     if r.Method == http.MethodPost {
@@ -48,7 +49,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-    fs := http.FileServer(http.Dir("."))  // Для раздачи статических файлов
+    fs := http.FileServer(http.Dir("."))  
     http.Handle("/style.css", fs)
     http.HandleFunc("/", handler)
 
