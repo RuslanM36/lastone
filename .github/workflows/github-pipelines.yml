@@ -1,71 +1,32 @@
-name: Go CI/CD Pipeline
+image: golang:1.24.0
 
-on:
-  push:
-    branches:
-      - master   
-  pull_request:
-    branches:
-      - master   
+pipelines:
+  branches:
+    main:
+      - step:
+          name: Build and Test
+          runs-on:
+            - windows
+          script:
+            - echo "Running on a local runner"
+            - go version
+            - go mod tidy
+            - go test ./...
+            - echo "Build Completed!"
 
-jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
-
-    steps:
+      - step:
+          name: Build and Push Docker Image
+          services:
+            - docker
+          script:
+            - echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            - docker build -t RuslanM36/lastone:latest .
+            - docker push RuslanM36/lastone:latest
       
-      - name: Checkout repository
-        uses: actions/checkout@v2  
-
-      
-      - name: Set up Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.24.0  
-
-      
-      - name: Install dependencies
-        run: go mod tidy  
-
-      
-      - name: Run tests
-        run: go test ./...  
-
-      
-      - name: Build application
-        run: go build -v  
-
-  
-  docker-build-and-deploy:
-    needs: build-and-test  
-    runs-on: ubuntu-latest
-
-    steps:
-      
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      
-      - name: Log in to Docker Hub
-        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-
-      
-      - name: Build Docker image
-        run: docker build . -t ${{ secrets.DOCKER_USERNAME }}/flooring-calculator:latest
-
-      
-      - name: Push Docker image
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/flooring-calculator:latest
-
-      
-      - name: Deploy to server
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            docker pull ${{ secrets.DOCKER_USERNAME }}/flooring-calculator:latest
-            docker stop flooring-calculator || true
-            docker rm flooring-calculator || true
-            docker run -d -p 8888:8888 --name flooring-calculator ${{ secrets.DOCKER_USERNAME }}/flooring-calculator:latest
+      - step:
+          name: Run
+          runs-on:
+            - windows
+            - self.hosted
+          script:
+            - docker run -d -p 88:8888 RuslanM36/lastone:latest
