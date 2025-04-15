@@ -2,10 +2,9 @@ name: Go CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
+    branches:
+      - main  
+      - staging  
 env:
   DOCKER_IMAGE: RuslanM36/lastone
   DOCKER_TAG: latest
