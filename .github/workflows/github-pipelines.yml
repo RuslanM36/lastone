@@ -1,6 +1,5 @@
 name: CI/CD Pipeline
 
-
 on:
   push:
     branches:
@@ -22,17 +21,26 @@ jobs:
         with:
           go-version: '1.24.0'
 
-      - name: Build Go app
-        run: go build -o myapp
+      - name: Verify Docker connectivity
+        run: |
+          ping -c 3 auth.docker.io
+          curl -v https://registry-1.docker.io/v2/
 
       - name: Build and push Docker image
         run: |
-          echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-          docker build -t ruslanm36/lastone:latest .
-          docker push ruslanm36/lastone:latest
+          # Явно указываем docker.io и логин в нижнем регистре
+          echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+          docker build -t docker.io/ruslanm36/lastone:latest .
+          docker push docker.io/ruslanm36/lastone:latest
 
       - name: Deploy container
         run: |
           docker stop lastone || true
           docker rm lastone || true
-          docker run -d --name lastone -p 8888:8888 ruslanm36/lastone:latest
+          docker run -d --name lastone -p 8888:8888 docker.io/ruslanm36/lastone:latest
+
+      - name: Debug cleanup
+        if: always()
+        run: |
+          docker system prune -f
+          docker images
