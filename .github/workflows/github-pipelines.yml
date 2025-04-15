@@ -21,15 +21,22 @@ jobs:
         with:
           go-version: '1.24.0'
 
+      - name: Build Go app
+        run: go build -o myapp
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
       - name: Build and push Docker image
         run: |
-          $pass = "${{ secrets.DOCKERHUB_PASSWORD }}"
-          $pass | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
-          docker build -t docker.io/ruslanm36/lastone:latest .
-          docker push docker.io/ruslanm36/lastone:latest
+          docker build -t ruslanm36/my-go-app:latest .
+          docker push ruslanm36/my-go-app:latest
 
       - name: Deploy container
         run: |
-          docker stop lastone || true
-          docker rm lastone || true
-          docker run -d --name lastone -p 8888:8888 docker.io/ruslanm36/lastone:latest
+          docker stop my-go-app || true
+          docker rm my-go-app || true
+          docker run -d --name my-go-app -p 8080:8080 ruslanm36/my-go-app:latest
