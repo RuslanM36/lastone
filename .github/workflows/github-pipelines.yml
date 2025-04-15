@@ -21,16 +21,10 @@ jobs:
         with:
           go-version: '1.24.0'
 
-      - name: Verify network (Windows)
-        run: |
-          # Для Windows используйте:
-          ping -n 3 auth.docker.io
-          curl.exe -vk https://registry-1.docker.io/v2/
-
       - name: Build and push Docker image
         run: |
-          $env:DOCKERHUB_PASSWORD = "${{ secrets.DOCKERHUB_PASSWORD }}"
-          docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin <<< "$env:DOCKERHUB_PASSWORD"
+          $pass = "${{ secrets.DOCKERHUB_PASSWORD }}"
+          $pass | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
           docker build -t docker.io/ruslanm36/lastone:latest .
           docker push docker.io/ruslanm36/lastone:latest
 
