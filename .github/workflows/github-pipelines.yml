@@ -1,104 +1,42 @@
-name: GitLab Flow CI/CD Pipeline
+name: CI/CD Pipeline
 
 on:
-  # Автоматические триггеры (GitLab Flow)
   push:
     branches:
-      - main      # Продакшен-деплой
-      - staging   # Пре-продакшен
-  pull_request:
-    branches:
-      - main      # Обязательный код-ревью перед мержем
-
-  # Ручной запуск (для production)
-  workflow_dispatch:
-    inputs:
-      deploy_to:
-        description: 'Окружение для деплоя'
-        required: true
-        default: 'staging'
-        type: choice
-        options:
-          - staging
-          - production
-      force_rebuild:
-        description: 'Полная пересборка образа'
-        required: false
-        default: false
-        type: boolean
-
-env:
-  GO_VERSION: 1.24.0
-  DOCKER_IMAGE: RuslanM36/lastone
-  DOCKER_TAG: latest
+      - main
+      - production
+      - feature/*
+      - bugfix/*
 
 jobs:
-  # Этап тестирования (для всех веток)
-  test:
-    name: Run Tests
-    runs-on: ubuntu-latest
-    if: github.event.pull_request.head.repo.full_name == github.repository  # Запрет форков
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: ${{ env.GO_VERSION }}
-      - run: go mod tidy
-      - run: go test -v ./...
-
-  # Сборка образа (только для main/staging)
-  build:
-    name: Build Docker Image
-    needs: test
+  build-and-deploy:
     runs-on: self-hosted
-    if: |
-      github.ref == 'refs/heads/main' ||
-      github.ref == 'refs/heads/staging' ||
-      github.event_name == 'workflow_dispatch'
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Docker Login
-        uses: docker/login-action@v2
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and Push
-        uses: docker/build-push-action@v4
+          go-version: '1.24.0'
+
+      - name: Build Go app
+        run: go build -o myapp
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
         with:
-          push: true
-          tags: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            ENVIRONMENT=${{ github.event.inputs.deploy_to || 'staging' }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-  # Деплой (строго по GitLab Flow)
-  deploy:
-    name: Deploy to ${{ github.event.inputs.deploy_to || (github.ref == 'refs/heads/main' && 'production' || 'staging') }}
-    needs: build
-    runs-on: self-hosted
-    if: |
-      (github.ref == 'refs/heads/main' && github.event.inputs.deploy_to != 'staging') ||
-      (github.ref == 'refs/heads/staging' && github.event.inputs.deploy_to != 'production') ||
-      (github.event_name == 'workflow_dispatch')
-    steps:
-      - name: Stop Old Container
+      - name: Build and push Docker image
         run: |
-          docker stop $(docker ps -q --filter ancestor=${{ env.DOCKER_IMAGE }}) || true
-          docker rm $(docker ps -aq --filter ancestor=${{ env.DOCKER_IMAGE }}) || true
+          docker build -t RuslanM36/lastone:latest .
+          docker push RuslanM36/lastone:latest
 
-      - name: Deploy Container
+      - name: Deploy container
         run: |
-          docker pull ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
-          docker run -d \
-            -p 88:8888 \
-            -e ENVIRONMENT=${{ github.event.inputs.deploy_to || (github.ref == 'refs/heads/main' && 'production' || 'staging') }} \
-            --restart always \
-            --name app-${{ github.event.inputs.deploy_to || (github.ref == 'refs/heads/main' && 'production' || 'staging') }} \
-            ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
-
-      - name: Health Check
-        run: |
-          sleep 10  # Даем контейнеру время запуститься
-          curl -sSf http://localhost:88/healthcheck || (docker logs app-${{ github.event.inputs.deploy_to || (github.ref == 'refs/heads/main' && 'production' || 'staging') }} && exit 1)
+          docker stop my-app-go || true
+          docker rm my-app-go || true
+          docker run -d --name my-app-go -p 8888:8888 RuslanM36/lastone:latest
