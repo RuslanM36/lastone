@@ -38,6 +38,6 @@ jobs:
 
       - name: Deploy container
         run: |
-          docker stop my-app-go || true
-          docker rm my-app-go || true
-          docker run -d --name my-app-go -p 8888:8888 RuslanM36/lastone:latest
+          docker stop lastone || true
+          docker rm lastone || true
+          docker run -d --name lastone -p 8888:8888 RuslanM36/lastone:latest
