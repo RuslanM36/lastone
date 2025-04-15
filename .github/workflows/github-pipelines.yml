@@ -1,32 +1,58 @@
-image: golang:1.24.0
+name: Go CI/CD Pipeline
 
-pipelines:
-  branches:
-    main:
-      - step:
-          name: Build and Test
-          runs-on:
-            - windows
-          script:
-            - echo "Running on a local runner"
-            - go version
-            - go mod tidy
-            - go test ./...
-            - echo "Build Completed!"
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
-      - step:
-          name: Build and Push Docker Image
-          services:
-            - docker
-          script:
-            - echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-            - docker build -t RuslanM36/lastone:latest .
-            - docker push RuslanM36/lastone:latest
+env:
+  DOCKER_IMAGE: RuslanM36/lastone
+  DOCKER_TAG: latest
+
+jobs:
+  test:
+    name: Build and Test
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.24'
+    
+    - name: Install dependencies
+      run: go mod tidy
       
-      - step:
-          name: Run
-          runs-on:
-            - windows
-            - self.hosted
-          script:
-            - docker run -d -p 88:8888 RuslanM36/lastone:latest
+    - name: Run tests
+      run: go test ./...
+  
+  build-docker:
+    name: Build and Push Docker Image
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    
+    - name: Build and push
+      uses: docker/build-push-action@v4
+      with:
+        push: true
+        tags: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
+    
+  deploy:
+    name: Deploy
+    needs: build-docker
+    runs-on: self-hosted
+    steps:
+    - name: Run container
+      run: |
+        docker pull ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
+        docker run -d -p 88:8888 ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
