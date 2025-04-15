@@ -1,36 +1,44 @@
-name: Go CI/CD Pipeline
+name: GitLab Flow CI/CD
 
 on:
   push:
     branches:
-      - main  
-      - staging  
+      - main      
+      - staging   
+  pull_request:
+    branches:
+      - main      
+
 env:
+  GO_VERSION: 1.24.0
   DOCKER_IMAGE: RuslanM36/lastone
   DOCKER_TAG: latest
 
 jobs:
+  
   test:
-    name: Build and Test
-    runs-on: windows-latest
+    name: Run Tests
+    runs-on: ubuntu-latest  
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up Go
+    - name: Setup Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.24'
+        go-version: ${{ env.GO_VERSION }}
     
     - name: Install dependencies
       run: go mod tidy
       
     - name: Run tests
-      run: go test ./...
+      run: go test -v ./...
+
   
-  build-docker:
-    name: Build and Push Docker Image
+  build:
+    name: Build Docker Image
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: self-hosted  
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
     steps:
     - uses: actions/checkout@v4
     
@@ -45,13 +53,31 @@ jobs:
       with:
         push: true
         tags: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
-    
+        platforms: linux/amd64  
+
+ 
   deploy:
     name: Deploy
-    needs: build-docker
+    needs: build
     runs-on: self-hosted
+    strategy:
+      matrix:
+        environment: 
+          - ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
     steps:
-    - name: Run container
+    - name: Stop old container
+      run: |
+        docker stop $(docker ps -q --filter ancestor=${{ env.DOCKER_IMAGE }}) || true
+        docker rm $(docker ps -aq --filter ancestor=${{ env.DOCKER_IMAGE }}) || true
+    
+    - name: Run new container
       run: |
         docker pull ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
-        docker run -d -p 88:8888 ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
+        docker run -d \
+          -p 88:8888 \
+          --name app-${{ matrix.environment }} \
+          ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
+    
+    - name: Verify deployment
+      run: |
+        curl -sSf http://localhost:88/healthcheck || exit 1
