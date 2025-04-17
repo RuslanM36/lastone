@@ -27,11 +27,11 @@ jobs:
       - name: Build and push Docker image
         run: |
           echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-          docker build -t RuslanM36/lastone:latest .
-          docker push RuslanM36/lastone:latest
+          docker build -t ruslanmakovchik/lastone:latest .
+          docker push ruslanmakovchik/lastone:latest
 
       - name: Deploy container
         run: |
           docker stop lastone || true
           docker rm lastone || true
-          docker run -d --name lastone -p 8888:8888 RuslanM36/lastone:latest
+          docker run -d --name lastone -p 8888:8888 ruslanmakovchik/lastone:latest
