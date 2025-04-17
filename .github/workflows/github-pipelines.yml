@@ -32,6 +32,4 @@ jobs:
 
       - name: Deploy container
         run: |
-          docker stop lastone 2>$null
-          docker rm lastone 2>$null
           docker run -d --name lastone -p 8888:8888 ruslanmakovchik/lastone:latest
