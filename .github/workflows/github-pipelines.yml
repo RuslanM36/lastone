@@ -29,7 +29,7 @@ jobs:
   build:
     runs-on: self-hosted
     needs: test
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production'
+    if: github.ref == 'refs/heads/main' 2>$null github.ref == 'refs/heads/production'
     outputs:
       image-tag: ${{ steps.get_sha.outputs.short_sha }}
     steps:
@@ -62,8 +62,8 @@ jobs:
     steps:
       - name: Deploy to staging
         run: |
-          docker stop lastone || true
-          docker rm lastone || true
+          docker stop lastone 2>$null true
+          docker rm lastone 2>$null true
           docker run -d --name lastone -p 8888:8888 ruslanmakovchik/lastone:staging
 
   deploy-production:
@@ -76,7 +76,7 @@ jobs:
     steps:
       - name: Deploy to production
         run: |
-          docker stop lastone || true
-          docker rm lastone || true
+          docker stop lastone 2>$null true
+          docker rm lastone 2>$null true
           docker run -d --name lastone -p 8888:8888 ruslanmakovchik/lastone:${{ needs.build.outputs.image-tag }}
           # ЗАПУШИТЬ ВСЕ, СТАРЫЙ ПАЙПЛАЙН В БЛОКНОТЕ
