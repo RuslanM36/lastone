@@ -5,8 +5,8 @@ on:
     branches:
       - main
       - production
-      - feature/*
-      - bugfix/*
+      - feature/**
+      - bugfix/**
 
 jobs:
   build-and-deploy:
