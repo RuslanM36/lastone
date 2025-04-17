@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: GitLab Flow CI/CD
 
 on:
   push:
@@ -7,32 +7,76 @@ on:
       - production
       - feature/**
       - bugfix/**
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  build-and-deploy:
+  test:
     runs-on: self-hosted
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+        
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.24.0'
+          
+      - name: Run tests
+        run: go test -v ./...
 
-      - name: Build Go app
-        run: go build -o myapp
-
+  build:
+    runs-on: self-hosted
+    needs: test
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production'
+    outputs:
+      image-tag: ${{ steps.get_sha.outputs.short_sha }}
+    steps:
+      - name: Get short SHA
+        id: get_sha
+        run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+      
       - name: Build and push Docker image
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
         run: |
           echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-          docker build -t ruslanmakovchik/lastone:latest .
-          docker push ruslanmakovchik/lastone:latest
+          
+          # Build with commit SHA tag
+          docker build -t ruslanmakovchik/lastone:${{ steps.get_sha.outputs.short_sha }} .
+          docker push ruslanmakovchik/lastone:${{ steps.get_sha.outputs.short_sha }}
+          
+          # Additional tagging for main branch
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            docker tag ruslanmakovchik/lastone:${{ steps.get_sha.outputs.short_sha }} ruslanmakovchik/lastone:staging
+            docker push ruslanmakovchik/lastone:staging
+          fi
 
-      - name: Deploy container
+  deploy-staging:
+    runs-on: self-hosted
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+    steps:
+      - name: Deploy to staging
         run: |
-          docker stop lastone 2>$null
-          docker rm lastone 2>$null
-    
-          docker run -d --name lastone -p 8888:8888 ruslanmakovchik/lastone:latest
+          docker stop lastone || true
+          docker rm lastone || true
+          docker run -d --name lastone -p 8888:8888 ruslanmakovchik/lastone:staging
+
+  deploy-production:
+    runs-on: self-hosted
+    needs: build
+    if: github.ref == 'refs/heads/production'
+    environment: 
+      name: production
+      url: https://your-production-url.com
+    steps:
+      - name: Deploy to production
+        run: |
+          docker stop lastone || true
+          docker rm lastone || true
+          docker run -d --name lastone -p 8888:8888 ruslanmakovchik/lastone:${{ needs.build.outputs.image-tag }}
+          # ЗАПУШИТЬ ВСЕ, СТАРЫЙ ПАЙПЛАЙН В БЛОКНОТЕ
