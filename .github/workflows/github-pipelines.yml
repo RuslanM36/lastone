@@ -32,9 +32,7 @@ jobs:
 
       - name: Deploy container
         run: |
-          if (docker ps -a --filter "name=lastone" --format "{{.Names}}") {
-      docker stop lastone
-      docker rm lastone
-          }
+          docker stop lastone 2>$null
+          docker rm lastone 2>$null
     
           docker run -d --name lastone -p 8888:8888 ruslanmakovchik/lastone:latest
