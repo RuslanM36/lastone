@@ -5,7 +5,11 @@ on:
     branches:
       - main
       - production
+<<<<<<< HEAD
       - feature
+=======
+     
+>>>>>>> 2650826957e1232b3cf384f0adb5bb09ac41f30b
 
 jobs:
   build-and-deploy:
